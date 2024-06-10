@@ -6,6 +6,42 @@
 # For more information see the documentation:
 #	https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
 #
+echo "··························XDEBUG CONFIG·········································································"
+echo "---->  Copying default XDEBUG ini"
+cp /opt/xdebug/xdebug-default.ini /etc/$PHP_VERSION/conf.d/xdebug.ini
+
+if [[ $MODES == *"profile"* ]]; then
+    echo "---->  Appending profile ini"
+    cat /opt/xdebug/xdebug-profile.ini >> /etc/$PHP_VERSION/conf.d/xdebug.ini
+fi
+
+if [[ $MODES == *"debug"* ]]; then
+    echo "---->  Appending debug ini"
+    cat /opt/xdebug/xdebug-debug.ini >> /etc/$PHP_VERSION/conf.d/xdebug.ini
+
+    echo "---->  Setting Client Host to: $CLIENT_HOST"
+    sed -i -e 's/xdebug.client_host = localhost/xdebug.client_host = '"${CLIENT_HOST}"'/g' /etc/$PHP_VERSION/conf.d/xdebug.ini
+
+    echo "---->  Setting Client Port to: $CLIENT_PORT"
+    sed -i -e 's/xdebug.client_port = 9003/xdebug.client_port = '"${CLIENT_PORT}"'/g' /etc/$PHP_VERSION/conf.d/xdebug.ini
+
+    echo "---->  Setting IDE Key to: $IDEKEY"
+    sed -i -e 's/xdebug.idekey = docker/xdebug.idekey = '"${IDEKEY}"'/g' /etc/$PHP_VERSION/conf.d/xdebug.ini
+fi
+
+if [[ $MODES == *"trace"* ]]; then
+    echo "---->  Appending trace ini"
+    cat /opt/xdebug/xdebug-trace.ini >> /etc/$PHP_VERSION/conf.d/xdebug.ini
+fi
+
+if [[ "off" == $MODES || -z $MODES ]]; then
+    echo "---->  Disabling XDEBUG"
+    cp /opt/xdebug/xdebug-off.ini /etc/$PHP_VERSION/conf.d/xdebug.ini
+else
+    echo "---->  Setting XDEBUG mode: $MODES"
+    echo "xdebug.mode = $MODES" >> /etc/$PHP_VERSION/conf.d/xdebug.ini
+fi;
+
 
 
 if [ -z "$TIMEZONE" ]; then

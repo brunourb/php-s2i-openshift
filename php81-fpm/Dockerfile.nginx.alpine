@@ -1,6 +1,6 @@
-FROM alpine:3.17
+FROM alpine:latest
 
-ENV PHP_VERSION=php81 \
+ENV PHP_VERSION=php83 \
 LANG=es_ES.UTF-8 \
 COMPOSER_VERSION=2.6.3 \
 LANGUAGE=es_ES.UTF-8 \
@@ -14,8 +14,7 @@ LABEL autor="Martin Vilche <mfvilche@gmail.com>" \
       io.openshift.expose-services="8080" \
       io.openshift.s2i.scripts-url="image:///usr/libexec/s2i"
       
-
-RUN apk --no-cache upgrade --available && apk add --update --no-cache git tidyhtml busybox-suid findutils   tzdata shadow nginx bash curl \
+RUN apk --no-cache upgrade --available && apk add --update --no-cache ${PHPIZE_DEPS} git tidyhtml busybox-suid findutils tzdata shadow nginx bash curl  g++ make autoconf yaml \
 $PHP_VERSION \
 $PHP_VERSION-fpm \
 $PHP_VERSION-intl \
@@ -31,17 +30,13 @@ $PHP_VERSION-sodium \
 $PHP_VERSION-pcntl \
 $PHP_VERSION-common \
 $PHP_VERSION-xsl \
-$PHP_VERSION-pecl-mailparse \
-$PHP_VERSION-pecl-imagick \
 $PHP_VERSION-mysqlnd \
 $PHP_VERSION-enchant \
 $PHP_VERSION-pspell \
-$PHP_VERSION-pecl-redis \
 $PHP_VERSION-snmp \
 $PHP_VERSION-doc \
 $PHP_VERSION-fileinfo \
 $PHP_VERSION-mbstring \
-$PHP_VERSION-pecl-yaml \
 $PHP_VERSION-dev \
 $PHP_VERSION-embed \
 $PHP_VERSION-xmlreader \
@@ -63,7 +58,6 @@ $PHP_VERSION-odbc \
 $PHP_VERSION-phar \
 $PHP_VERSION-pdo_pgsql \
 $PHP_VERSION-imap \
-$PHP_VERSION-pecl-apcu \
 $PHP_VERSION-pdo_dblib \
 $PHP_VERSION-pgsql \
 $PHP_VERSION-pdo_odbc \
@@ -75,9 +69,6 @@ $PHP_VERSION-calendar \
 $PHP_VERSION-tidy \
 $PHP_VERSION-dom \
 $PHP_VERSION-sockets \
-$PHP_VERSION-pecl-event \
-$PHP_VERSION-pecl-vips \
-$PHP_VERSION-pecl-memcached \
 $PHP_VERSION-brotli \
 $PHP_VERSION-soap \
 $PHP_VERSION-sysvmsg \
@@ -87,9 +78,19 @@ $PHP_VERSION-pdo \
 $PHP_VERSION-bz2 \
 $PHP_VERSION-mysqli \
 $PHP_VERSION-simplexml \
-$PHP_VERSION-xmlwriter
+$PHP_VERSION-xmlwriter \
+$PHP_VERSION-pecl-yaml \
+$PHP_VERSION-pecl-redis \
+$PHP_VERSION-pecl-apcu \
+$PHP_VERSION-pecl-mailparse \
+$PHP_VERSION-pecl-imagick \
+$PHP_VERSION-pecl-event \
+$PHP_VERSION-pecl-vips \
+$PHP_VERSION-pecl-memcached \
+$PHP_VERSION-pecl-redis \
+$PHP_VERSION-pecl-xdebug
 
-
+WORKDIR /var/www/html
 
 RUN sed -i -e "s/error_log.*/error_log \/proc\/self\/fd\/2 info;/g" /etc/nginx/nginx.conf && \
 sed -i -e "s/user nginx;//g" /etc/nginx/nginx.conf && \
@@ -109,7 +110,7 @@ rm -rf /var/cache/apk/* /etc/localtime
 
 COPY contrib/s2i/bin/ /usr/libexec/s2i
 
-COPY contrib/info.php /var/www/html/index.php
+#COPY contrib/info.php /var/www/html/index.php
 
 COPY contrib/nginx-http.conf /etc/nginx/http.d/default.conf
 
@@ -119,14 +120,21 @@ COPY contrib/prometheus/phpfpm_exporter /php-fpm/phpfpm_exporter
 
 COPY contrib/prometheus/nginx-prometheus-exporter /etc/nginx/nginx-prometheus-exporter
 
-RUN mkdir -p /opt/composer_env /usr/share/nginx /var/www/html /run/nginx /var/lib/nginx/logs /var/log/nginx /usr/share/composer_install /var/log/$PHP_VERSION && usermod -u 2190 nginx && usermod -aG 0 nginx && touch /etc/localtime /etc/timezone && \
+COPY contrib/xdebug/xdebug-debug.ini /opt/xdebug/xdebug-debug.ini
+COPY contrib/xdebug/xdebug-default.ini /opt/xdebug/xdebug-default.ini
+COPY contrib/xdebug/xdebug-off.ini /opt/xdebug/xdebug-off.ini
+COPY contrib/xdebug/xdebug-profile.ini /opt/xdebug/xdebug-profile.ini
+COPY contrib/xdebug/xdebug-trace.ini /opt/xdebug/xdebug-trace.ini
+
+RUN mkdir -p /tmp/src/ /opt/composer_env /usr/share/nginx /var/www/html /run/nginx /var/lib/nginx/logs /var/log/nginx /usr/share/composer_install /var/log/$PHP_VERSION && usermod -u 2190 nginx && usermod -aG 0 nginx && touch /etc/localtime /etc/timezone && \
 chown -R 2190 /usr/local/bin/composer /php-fpm /var/log/$PHP_VERSION /run/nginx /etc/nginx /usr/share/nginx /var/lib/nginx /var/log/nginx /etc/$PHP_VERSION /opt/composer_env /var/www/html /etc/timezone /etc/localtime /usr/libexec/s2i && \
 chgrp -R 0 /usr/local/bin/composer /php-fpm /var/log/$PHP_VERSION /run/nginx /etc/nginx /usr/share/nginx /var/lib/nginx /var/log/nginx /etc/$PHP_VERSION /opt/composer_env /var/www/html /etc/timezone /etc/localtime /usr/libexec/s2i && \
 chmod -R g=u /usr/local/bin/composer /php-fpm /var/log/$PHP_VERSION /run/nginx /etc/nginx /usr/share/nginx /var/lib/nginx /var/log/nginx /etc/$PHP_VERSION /opt/composer_env /var/www/html /etc/timezone /etc/localtime /usr/libexec/s2i && \
 chmod +x /usr/libexec/s2i/* /php-fpm/phpfpm_exporter /etc/nginx/nginx-prometheus-exporter /usr/local/bin/composer && \
 chmod g=u -R /usr/local
 
-WORKDIR /var/www/html
+# estamos dizendo que o usuário www-data e o grupo www-data agora são donos do diretório /var/www
+RUN chown -R nginx:nginx /var/www
 
 ENV HOME=/usr/share/nginx \
 NGINX_CONFIGDIR=/etc/nginx \
@@ -135,10 +143,18 @@ NGINX_WORKER_PROCESSES=1 \
 NGINX_WORKER_CONNECTION=1024 \
 NGINX_CLIENT_MAX_BODY_SIZE=0 \
 FPM_GROUP=nginx \
-FPM_USER=nginx
+FPM_USER=nginx \
+TIMEZONE=America/Sao_Paulo \
+XDEBUG_MODES=debug \
+CLIENT_HOST=0.0.0.0 \
+CLIENT_PORT=9003 \
+IDEKEY=cotripal \
+PHP_VERSION=$PHP_VERSION \
+MODES=debug
 
 USER 2190:0
 
 EXPOSE 8080 9253 9113
 
-CMD ["/usr/libexec/s2i/run"]
+# Run script uses standard ways to run the application
+CMD /usr/libexec/s2i/run
