@@ -136,21 +136,24 @@ chmod g=u -R /usr/local
 # estamos dizendo que o usuário www-data e o grupo www-data agora são donos do diretório /var/www
 RUN chown -R nginx:nginx /var/www
 
+# Set environment variables with default values
 ENV HOME=/usr/share/nginx \
-NGINX_CONFIGDIR=/etc/nginx \
-FPM_MAX_CHILDREN=5 \
-NGINX_WORKER_PROCESSES=1 \
-NGINX_WORKER_CONNECTION=1024 \
-NGINX_CLIENT_MAX_BODY_SIZE=0 \
-FPM_GROUP=nginx \
-FPM_USER=nginx \
-TIMEZONE=America/Sao_Paulo \
-XDEBUG_MODES=debug \
-CLIENT_HOST=0.0.0.0 \
-CLIENT_PORT=9003 \
-IDEKEY=cotripal \
-PHP_VERSION=$PHP_VERSION \
-MODES=debug
+    NGINX_CONFIGDIR=/etc/nginx \
+    FPM_MAX_CHILDREN=${FPM_MAX_CHILDREN:-10} \
+    NGINX_WORKER_PROCESSES=${NGINX_WORKER_PROCESSES:-1} \
+    NGINX_WORKER_CONNECTION=${NGINX_WORKER_CONNECTION:-1024} \
+    NGINX_CLIENT_MAX_BODY_SIZE=${NGINX_CLIENT_MAX_BODY_SIZE:-0} \
+    FPM_GROUP=${FPM_GROUP:-nginx} \
+    FPM_USER=${FPM_USER:-nginx} \
+    TIMEZONE=${TIMEZONE:-America/Sao_Paulo} \
+    XDEBUG_MODES=${XDEBUG_MODES:-off} \
+    CLIENT_HOST=${CLIENT_HOST:-0.0.0.0} \
+    CLIENT_PORT=${CLIENT_PORT:-9003} \
+    IDEKEY=${IDEKEY:-cotripal} \
+    PHP_VERSION=${PHP_VERSION:-php83} \
+    MIGRATIONS=${MIGRATIONS:-0} \
+    ARTISAN_COMMAND_OVERRIDE="${ARTISAN_COMMAND_OVERRIDE:-php artisan config:cache}" \
+    MODES=${MODES:-off}
 
 USER 2190:0
 
